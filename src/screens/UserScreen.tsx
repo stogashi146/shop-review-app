@@ -1,17 +1,17 @@
-import React, { useEffect } from "react";
-import { StatusBar } from "expo-status-bar";
-import { FlatList, StyleSheet, Text, View, SafeAreaView } from "react-native";
+import React, { useState, useContext } from "react";
+import { StyleSheet, SafeAreaView } from "react-native";
+import firebase from "firebase";
+import { updateUser } from "../lib/firebase";
 // components
-import { ShopDetail } from "../components/ShopDetail";
-// lib
-import { getShops } from "../lib/firebase";
-// components
-import { ShopReviewItem } from "../components/ShopReviewItem";
+import { Form } from "../components/Form";
+import { Button } from "../components/Button";
+import { Loading } from "../components/Loading";
+// contexts
+import { UserContext } from "../contexts/userContext";
 // types
-import { Shop } from "../types/shop";
 import { RootStackParamList } from "../types/navigation";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { NavigationHelpersContext, RouteProp } from "@react-navigation/native";
+import { RouteProp } from "@react-navigation/native";
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, "User">;
@@ -19,9 +19,29 @@ type Props = {
 };
 
 export const UserScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { user, setUser } = useContext(UserContext);
+  const [name, setName] = useState<string>(user!.name);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const onSubmit = async () => {
+    setLoading(true);
+    const updateAt = firebase.firestore.Timestamp.now();
+    await updateUser(user!.id!, { name, updateAt });
+    setUser({ ...user!, name, updateAt });
+    setLoading(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <Text>User Screen</Text>
+      <Form
+        value={name}
+        onChangeText={(text) => {
+          setName(text);
+        }}
+        label="名前"
+      />
+      <Button onPress={onSubmit} text="保存する" />
+      <Loading visible={loading} />
     </SafeAreaView>
   );
 };
@@ -31,6 +51,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     alignItems: "center",
-    justifyContent: "center",
+    width: "100%",
   },
 });

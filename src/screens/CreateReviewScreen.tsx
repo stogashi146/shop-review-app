@@ -1,18 +1,18 @@
-import React, { useEffect } from "react";
-import { StatusBar } from "expo-status-bar";
-import { FlatList, StyleSheet, Text, View, SafeAreaView } from "react-native";
+import React, { useState, useEffect, useContext } from "react";
+import { StyleSheet, Text, SafeAreaView } from "react-native";
+import { addReview } from "../lib/firebase";
+import { UserContext } from "../contexts/userContext";
+import firebase from "firebase";
 // components
-import { ShopDetail } from "../components/ShopDetail";
 import { IconButton } from "../components/IconButton";
-// lib
-import { getShops } from "../lib/firebase";
-// components
-import { ShopReviewItem } from "../components/ShopReviewItem";
+import { TextArea } from "../components/TextArea";
+import { StarInput } from "../components/StarInput";
+import { Button } from "../components/Button";
 // types
-import { Shop } from "../types/shop";
 import { RootStackParamList } from "../types/navigation";
+import { Review } from "../types/review";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { NavigationHelpersContext, RouteProp } from "@react-navigation/native";
+import { RouteProp } from "@react-navigation/native";
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, "CreateReview">;
@@ -21,6 +21,9 @@ type Props = {
 
 export const CreateReviewScreen: React.FC<Props> = ({ navigation, route }) => {
   const { shop } = route.params;
+  const [text, setText] = useState<string>("");
+  const [score, setScore] = useState<number>(3);
+  const { user } = useContext(UserContext);
   useEffect(() => {
     navigation.setOptions({
       title: shop.name,
@@ -28,11 +31,39 @@ export const CreateReviewScreen: React.FC<Props> = ({ navigation, route }) => {
         <IconButton name="x" onPress={() => navigation.goBack()} />
       ),
     });
-  }, [navigation, shop]);
+  }, [shop]);
+
+  const onSubmit = async () => {
+    // firestoreに保存する
+    const review = {
+      user: {
+        id: user!.id,
+        name: user!.name,
+      },
+      shop: {
+        id: shop!.id,
+        name: shop.name,
+      },
+      text,
+      score,
+      updatedAt: firebase.firestore.Timestamp.now(),
+      createdAt: firebase.firestore.Timestamp.now(),
+    } as Review;
+    await addReview(shop.id!, review);
+
+    navigation.goBack();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text>Create Review Screen</Text>
+      <StarInput score={score} onChangeScore={(value) => setScore(value)} />
+      <TextArea
+        value={text}
+        onChangeText={(value) => setText(value)}
+        label="レビュー"
+        placeholder="レビューを書いてください"
+      />
+      <Button text="レビューを投稿する" onPress={onSubmit} />
     </SafeAreaView>
   );
 };
@@ -41,7 +72,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
