@@ -1,35 +1,45 @@
-import React, { useEffect } from "react";
-import { StatusBar } from "expo-status-bar";
-import { FlatList, StyleSheet, Text, View, SafeAreaView } from "react-native";
-// components
+import React, { useEffect, useState } from "react";
+import { StyleSheet, SafeAreaView, FlatList } from "react-native";
+import { getReviews } from "../lib/firebase";
+/* components */
 import { ShopDetail } from "../components/ShopDetail";
 import { FloatingActionButton } from "../components/FloatingActionButton";
-// lib
-import { getShops } from "../lib/firebase";
-// components
-import { ShopReviewItem } from "../components/ShopReviewItem";
-// types
-import { Shop } from "../types/shop";
-import { RootStackParamList } from "../types/navigation";
+import { ReviewItem } from "../components/ReviewItem";
+/* types */
 import { StackNavigationProp } from "@react-navigation/stack";
-import { NavigationHelpersContext, RouteProp } from "@react-navigation/native";
+import { RouteProp } from "@react-navigation/native";
+import { RootStackParamList } from "../types/navigation";
+import { Review } from "../types/review";
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, "Shop">;
   route: RouteProp<RootStackParamList, "Shop">;
 };
 
-export const ShopScreen: React.FC<Props> = ({ navigation, route }) => {
+export const ShopScreen: React.FC<Props> = ({ navigation, route }: Props) => {
   const { shop } = route.params;
+  const [reviews, setReviews] = useState<Review[]>([]);
 
   useEffect(() => {
-    // ヘッダータイトルに店名を表示する
-    navigation.setOptions({ title: shop.name });
+    navigation.setOptions({
+      title: shop.name,
+    });
+
+    const fetchReviews = async () => {
+      const reviews = await getReviews(shop.id!);
+      setReviews(reviews);
+    };
+    fetchReviews();
   }, [shop]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <ShopDetail shop={shop} />
+      <FlatList
+        ListHeaderComponent={<ShopDetail shop={shop} />}
+        data={reviews}
+        renderItem={({ item }) => <ReviewItem review={item} />}
+        keyExtractor={(item) => item.id!}
+      />
       <FloatingActionButton
         iconName="plus"
         onPress={() => navigation.navigate("CreateReview", { shop })}
@@ -42,7 +52,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
   },
 });
